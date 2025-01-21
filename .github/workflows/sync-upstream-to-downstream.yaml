@@ -103,7 +103,8 @@ jobs:
             --head $DOWNSTREAM_OWNER:${TEMP_BRANCH} \
             --base ${{ env.BRANCH_NAME }}
       env:
-        GH_TOKEN: ${{ secrets.GH_TOKEN }}
+        #GH_TOKEN: ${{ secrets.GH_TOKEN }}
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         pr_title: "Sync downstream from upstream"
         pr_body: |
             :robot: This is an automated Pull Request created by `/.github/workflows/gggg.yaml`.
