@@ -4,20 +4,12 @@ on:
   workflow_dispatch:
     inputs:
       branch_name:
-        description: "Branch name to sync (e.g., '2024b'):"
+        description: "Branch name to sync:"
         required: true
         type: string
 
 env:
-  FILES_TO_RESOLVE: |
-    jupyter/datascience/ubi9-python-3.11/runtime-images/datascience-ubi9-py311.json
-    jupyter/datascience/ubi9-python-3.11/runtime-images/pytorch-ubi9-py311.json
-    jupyter/datascience/ubi9-python-3.11/runtime-images/rocm-pytorch-ubi9-py311.json
-    jupyter/datascience/ubi9-python-3.11/runtime-images/rocm-tensorflow-ubi9-py311.json
-    jupyter/datascience/ubi9-python-3.11/runtime-images/tensorflow-ubi9-py311.json
-    jupyter/datascience/ubi9-python-3.11/runtime-images/ubi9-py311.json
-    manifests/base/commit.env
-    manifests/base/params.env
+  FILES_TO_RESOLVE: "jupyter/datascience/ubi9-python-3.11/runtime-images/*.json"
   UPSTREAM_OWNER: "atheo89"
   DOWNSTREAM_OWNER: "Org-Test-Template"
 
@@ -73,7 +65,6 @@ jobs:
             git add "$FILE"
           fi
         done
-
         # Check for unresolved conflicts
         if [[ -n "$(git ls-files -u)" ]]; then
           echo "Unresolved conflicts detected in the following files:"
@@ -93,8 +84,6 @@ jobs:
         # Push the temporary branch to downstream
         git push origin ${TEMP_BRANCH}
 
-
-
     - name: Creates PR
       run: |
           gh pr create --repo https://github.com/$DOWNSTREAM_OWNER/notebooks.git \
@@ -103,7 +92,6 @@ jobs:
             --head $DOWNSTREAM_OWNER:${TEMP_BRANCH} \
             --base ${{ env.BRANCH_NAME }}
       env:
-        #GH_TOKEN: ${{ secrets.GH_TOKEN }}
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         pr_title: "Sync downstream from upstream"
         pr_body: |
