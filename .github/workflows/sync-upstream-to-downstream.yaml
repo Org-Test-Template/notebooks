@@ -9,15 +9,8 @@ on:
         type: string
 
 env:
-  FILES_TO_RESOLVE: |
-    jupyter/datascience/ubi9-python-3.11/runtime-images/datascience-ubi9-py311.json
-    jupyter/datascience/ubi9-python-3.11/runtime-images/pytorch-ubi9-py311.json
-    jupyter/datascience/ubi9-python-3.11/runtime-images/rocm-pytorch-ubi9-py311.json
-    jupyter/datascience/ubi9-python-3.11/runtime-images/rocm-tensorflow-ubi9-py311.json
-    jupyter/datascience/ubi9-python-3.11/runtime-images/tensorflow-ubi9-py311.json
-    jupyter/datascience/ubi9-python-3.11/runtime-images/ubi9-py311.json
-    manifests/base/commit.env
-    manifests/base/params.env
+  RUNTIME_IMAGES_DIR: "jupyter/datascience/ubi9-python-3.11/runtime-images/*.json"
+  MANIFEST_FILES: "manifests/base/*.env"
   UPSTREAM_OWNER: "atheo89"
   DOWNSTREAM_OWNER: "Org-Test-Template"
 
@@ -66,7 +59,8 @@ jobs:
         git pull upstream ${BRANCH_NAME} --no-rebase || true
 
         # Resolve known conflicts
-        echo "${FILES_TO_RESOLVE}" | while IFS= read -r FILE; do
+        FILES_TO_RESOLVE=$(eval echo "${RUNTIME_IMAGES_DIR} ${MANIFEST_FILES}")
+        for FILE in $FILES_TO_RESOLVE; do
           if [[ -f "$FILE" && "$(git status --porcelain=v1 2>/dev/null | grep -c "$FILE")" -gt 0 ]]; then
             echo "Resolving conflict for $FILE by keeping downstream changes."
             git checkout --ours "$FILE"
