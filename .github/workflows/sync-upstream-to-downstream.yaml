@@ -38,7 +38,7 @@ jobs:
 
     - name: Add upstream and downstream remotes
       run: |
-        git remote add upstream https://github.com/$UPSTREAM_OWNER/notebooks.git
+        git remote add upstream https://github.com/${{ env.UPSTREAM_OWNER }}/notebooks.git
         git fetch --all
 
     - name: Determine Downstream Branch
@@ -53,8 +53,9 @@ jobs:
         fi
 
         echo "DOWNSTREAM_BRANCH=$DOWNSTREAM_BRANCH" >> $GITHUB_ENV
+        echo "Temporary downstream branch will be: $DOWNSTREAM_BRANCH"
 
-    - name: Sync branches without extra merge commits
+    - name: Sync and resolve conflicts
       env:
         BRANCH_NAME: ${{ inputs.branch_name }}
         DOWNSTREAM_BRANCH: ${{ env.DOWNSTREAM_BRANCH }}
@@ -65,41 +66,44 @@ jobs:
 
         echo "Syncing downstream branch '${DOWNSTREAM_BRANCH}' from upstream branch '${BRANCH_NAME}'"
 
-        # Check out the downstream branch locally
-        git checkout origin/${DOWNSTREAM_BRANCH} -b ${TEMP_BRANCH} || exit 1
+        # Ensure the downstream branch exists locally
+        git checkout -b ${TEMP_BRANCH} origin/${DOWNSTREAM_BRANCH} || exit 1
 
-        # Attempt fast-forward merge
-        git merge upstream/${BRANCH_NAME} --ff-only || {
-          echo "Fast-forward merge failed. Falling back to rebase."
+        # Pull changes from the upstream branch
+        git pull upstream ${BRANCH_NAME} --no-rebase || true
 
-          # Rebase onto the upstream branch
-          git rebase upstream/${BRANCH_NAME} || {
-            echo "Rebase encountered conflicts. Attempting to resolve..."
+        # Resolve known conflicts
+        FILES_TO_RESOLVE=$(eval echo "${RUNTIME_IMAGES_DIR} ${MANIFEST_FILES}")
+        for FILE in $FILES_TO_RESOLVE; do
+          if [[ -f "$FILE" && "$(git status --porcelain=v1 2>/dev/null | grep -c "$FILE")" -gt 0 ]]; then
+            echo "Resolving conflict for $FILE by keeping downstream changes."
+            git checkout --ours "$FILE"
+            git add "$FILE"
+          fi
+        done
 
-            # Resolve known conflicts
-            FILES_TO_RESOLVE=$(eval echo "${RUNTIME_IMAGES_DIR} ${MANIFEST_FILES}")
-            for FILE in $FILES_TO_RESOLVE; do
-              if [[ -f "$FILE" && "$(git status --porcelain=v1 2>/dev/null | grep -c "$FILE")" -gt 0 ]]; then
-                echo "Resolving conflict for $FILE by keeping downstream changes."
-                git checkout --ours "$FILE"
-                git add "$FILE"
-              fi
-            done
+        # Check for unresolved conflicts
+        if [[ -n "$(git ls-files -u)" ]]; then
+          echo "Unresolved conflicts detected in the following files:"
+          git ls-files -u
+          echo "Aborting merge due to unexpected conflicts."
+          exit 1
+        fi
 
-            # Continue the rebase process
-            git rebase --continue || {
-              echo "Rebase failed after conflict resolution. Aborting rebase."
-              git rebase --abort
-              exit 1
-            }
-          }
-        }
+        # Commit changes if any
+        if [[ -n "$(git status --porcelain)" ]]; then
+          git commit -m "Merge upstream/${BRANCH_NAME} into downstream/${DOWNSTREAM_BRANCH} with resolved conflicts"
+        else
+          echo "No changes to commit. Exiting workflow."
+          exit 0
+        fi
 
-        # Push changes to the temporary branch
+        # Push the temporary branch to downstream
         git push origin ${TEMP_BRANCH}
 
 
-    - name: Create PR
+
+    - name: Creates PR
       run: |
           gh pr create --repo https://github.com/$DOWNSTREAM_OWNER/notebooks.git \
             --title "$pr_title" \
