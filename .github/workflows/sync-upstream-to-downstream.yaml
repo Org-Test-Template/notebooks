@@ -41,19 +41,33 @@ jobs:
         git remote add upstream https://github.com/${{ env.UPSTREAM_OWNER }}/notebooks.git
         git fetch --all
 
+    - name: Determine Downstream Branch
+      id: determine_branch
+      run: |
+        # Check if the branch follows the YYYYx pattern
+        if [[ "${{ inputs.branch_name }}" =~ ^[0-9]{4}[a-zA-Z]$ ]]; then
+          DOWNSTREAM_BRANCH="release-${{ inputs.branch_name }}"
+        else
+          # For 'main', keep it as 'main'
+          DOWNSTREAM_BRANCH="${{ inputs.branch_name }}"
+        fi
+
+        echo "DOWNSTREAM_BRANCH=$DOWNSTREAM_BRANCH" >> $GITHUB_ENV
+        echo "Temporary downstream branch will be: $DOWNSTREAM_BRANCH"
+
     - name: Sync and resolve conflicts
       env:
         BRANCH_NAME: ${{ inputs.branch_name }}
+        DOWNSTREAM_BRANCH: ${{ env.DOWNSTREAM_BRANCH }}
+        RUNTIME_IMAGES_DIR: ${{ env.RUNTIME_IMAGES_DIR }}
+        MANIFEST_FILES: ${{ env.MANIFEST_FILES }}
       run: |
         set -e
 
-        # Define branches
-        DOWNSTREAM_BRANCH="origin/${BRANCH_NAME}"
-
-        echo "Syncing downstream branch '${BRANCH_NAME}' from upstream branch '${BRANCH_NAME}'"
+        echo "Syncing downstream branch '${DOWNSTREAM_BRANCH}' from upstream branch '${BRANCH_NAME}'"
 
         # Ensure the downstream branch exists locally
-        git checkout -b ${TEMP_BRANCH} ${DOWNSTREAM_BRANCH}
+        git checkout -b ${TEMP_BRANCH} origin/${DOWNSTREAM_BRANCH} || exit 1
 
         # Pull changes from the upstream branch
         git pull upstream ${BRANCH_NAME} --no-rebase || true
@@ -78,7 +92,7 @@ jobs:
 
         # Commit changes if any
         if [[ -n "$(git status --porcelain)" ]]; then
-          git commit -m "Merge upstream/${BRANCH_NAME} into downstream/${BRANCH_NAME} with resolved conflicts"
+          git commit -m "Merge upstream/${BRANCH_NAME} into downstream/${DOWNSTREAM_BRANCH} with resolved conflicts"
         else
           echo "No changes to commit. Exiting workflow."
           exit 0
@@ -95,13 +109,12 @@ jobs:
             --title "$pr_title" \
             --body "$pr_body" \
             --head ${DOWNSTREAM_OWNER}:${TEMP_BRANCH} \
-            --base ${BRANCH_NAME}
+            --base ${DOWNSTREAM_BRANCH}
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         pr_title: "Sync downstream from upstream"
         pr_body: |
             :robot: This is an automated Pull Request created by `/.github/workflows/gggg.yaml`.
 
-            Have been updated the following related files:
+            The following related files have been updated:
               - $FILES_TO_RESOLVE
-
