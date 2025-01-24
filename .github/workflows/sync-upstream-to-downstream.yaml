@@ -94,8 +94,8 @@ jobs:
           gh pr create --repo https://github.com/$DOWNSTREAM_OWNER/notebooks.git \
             --title "$pr_title" \
             --body "$pr_body" \
-            --head $DOWNSTREAM_OWNER:${TEMP_BRANCH} \
-            --base ${{ env.BRANCH_NAME }}
+            --head ${DOWNSTREAM_OWNER}:${TEMP_BRANCH} \
+            --base ${BRANCH_NAME}
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         pr_title: "Sync downstream from upstream"
