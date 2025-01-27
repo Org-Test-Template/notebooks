@@ -54,6 +54,20 @@ jobs:
         echo "DOWNSTREAM_BRANCH=$DOWNSTREAM_BRANCH" >> $GITHUB_ENV
         echo "Temporary downstream branch will be: $DOWNSTREAM_BRANCH"
 
+    - name: Debug Environment Variables
+      run: |
+          echo "### Debugging Environment Variables ###"
+          echo "BRANCH_NAME: ${{ env.BRANCH_NAME }}"
+          echo "TEMP_BRANCH: ${{ env.TEMP_BRANCH }}"
+          echo "UPSTREAM_OWNER: ${{ env.UPSTREAM_OWNER }}"
+          echo "DOWNSTREAM_OWNER: ${{ env.DOWNSTREAM_OWNER }}"
+          echo "RUNTIME_IMAGES_DIR: ${{ env.RUNTIME_IMAGES_DIR }}"
+          echo "MANIFEST_FILES: ${{ env.MANIFEST_FILES }}"
+          echo "DOWNSTREAM_BRANCH: ${{ env.DOWNSTREAM_BRANCH }}"
+          echo "All environment variables:"
+          printenv
+      shell: bash
+
     - name: Sync and resolve conflicts
       run: |
         set -e
