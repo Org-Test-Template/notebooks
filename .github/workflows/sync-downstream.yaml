@@ -83,14 +83,15 @@ jobs:
           exit 1
         fi
 
-        # Continue merge
-        git merge --continue || {
+        # Continue merge with a commit message
+        git merge --continue -m "Merge upstream/${{ env.BRANCH_NAME }} into downstream/${{ env.DOWNSTREAM_BRANCH }} with resolved conflicts" || {
           echo "Merge could not continue. Aborting."
           exit 1
         }
 
         # Push the temporary branch to downstream
         git push origin ${{ env.TEMP_BRANCH }}
+
 
 
     # - name: Sync and resolve conflicts
