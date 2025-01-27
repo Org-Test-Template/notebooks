@@ -94,42 +94,15 @@ jobs:
         # Push the temporary branch to downstream
         git push origin ${{ env.TEMP_BRANCH }}
 
-    - name: Create PR
+    - name: Creates PR
       run: |
-        # Generate a list of commits that will be included in the PR
-        COMMIT_LIST=$(git log upstream/${{ env.BRANCH_NAME }}..${{ env.TEMP_BRANCH }} --oneline)
-
-        # Format the PR body with the list of commits
-        pr_body=$(cat <<-END
-        :robot: This is an automated Pull Request created by `/.github/workflows/sync-downstream.yaml`
-
-        ### Commits being incorporated:
-        $COMMIT_LIST
-        END
-        )
-
-        # Create the PR
-        gh pr create --repo https://github.com/${{ env.DOWNSTREAM_OWNER }}/notebooks.git \
-          --title "$pr_title" \
-          --body "$pr_body" \
-          --head ${{ env.DOWNSTREAM_OWNER }}:${{ env.TEMP_BRANCH }} \
-          --base ${{ env.DOWNSTREAM_BRANCH }}
+          gh pr create --repo https://github.com/${{ env.DOWNSTREAM_OWNER }}/notebooks.git \
+            --title "$pr_title" \
+            --body "$pr_body" \
+            --head ${{ env.DOWNSTREAM_OWNER }}:${{ env.TEMP_BRANCH }} \
+            --base ${{ env.DOWNSTREAM_BRANCH }}
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        pr_title: "Sync '${{ env.DOWNSTREAM_BRANCH }}' from '${{ env.UPSTREAM_OWNER }}':'${{ env.BRANCH_NAME }}'"
-
-
-
-    # - name: Creates PR
-    #   run: |
-    #       gh pr create --repo https://github.com/${{ env.DOWNSTREAM_OWNER }}/notebooks.git \
-    #         --title "$pr_title" \
-    #         --body "$pr_body" \
-    #         --head ${{ env.DOWNSTREAM_OWNER }}:${{ env.TEMP_BRANCH }} \
-    #         --base ${{ env.DOWNSTREAM_BRANCH }}
-    #   env:
-    #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-    #     pr_title: "Sync '${{ env.DOWNSTREAM_BRANCH }}' from opendatahub-io:'${{ env.BRANCH_NAME }}'"
-    #     pr_body: |
-    #         :robot: This is an automated Pull Request created by `/.github/workflows/sync-downstream.yaml
-
+        pr_title: "Sync '${{ env.DOWNSTREAM_BRANCH }}' from opendatahub-io:'${{ env.BRANCH_NAME }}'"
+        pr_body: |
+            :robot: This is an automated Pull Request created by `/.github/workflows/sync-downstream.yaml
