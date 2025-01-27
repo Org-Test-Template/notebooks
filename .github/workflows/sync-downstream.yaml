@@ -1,24 +1,23 @@
-name: Sync Downstream from Upstream
-
-on:
+---
+# This GitHub Action aims to sync the downstream branch with the upstream, resolve known conflicts, and generates a pull request
+name: Sync downstream branch from upstream
+on: # yamllint disable-line rule:truthy
   workflow_dispatch:
     inputs:
       branch_name:
-        description: "Branch name to sync:"
+        description: "Provide name of the branch want to sync:"
         required: true
+        default: "main"
         type: string
-
 env:
   RUNTIME_IMAGES_DIR: "jupyter/datascience/ubi9-python-3.11/runtime-images/*.json"
   MANIFEST_FILES: "manifests/base/*.env"
-  UPSTREAM_OWNER: "atheo89"
-  DOWNSTREAM_OWNER: "Org-Test-Template"
   BRANCH_NAME: ${{ inputs.branch_name }}
-  TEMP_BRANCH: sync-ds-${{ inputs.branch_name }}-${{ github.run_id }}
-
-
+  TEMP_BRANCH: sync-${{ inputs.branch_name }}-${{ github.run_id }}
+  DOWNSTREAM_OWNER: "Org-Test-Template"
+  UPSTREAM_OWNER: "atheo89"
 jobs:
-  sync-branches:
+  sync:
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -54,25 +53,11 @@ jobs:
         echo "DOWNSTREAM_BRANCH=$DOWNSTREAM_BRANCH" >> $GITHUB_ENV
         echo "Temporary downstream branch will be: $DOWNSTREAM_BRANCH"
 
-    - name: Debug Environment Variables
-      run: |
-          echo "### Debugging Environment Variables ###"
-          echo "BRANCH_NAME: ${{ env.BRANCH_NAME }}"
-          echo "TEMP_BRANCH: ${{ env.TEMP_BRANCH }}"
-          echo "UPSTREAM_OWNER: ${{ env.UPSTREAM_OWNER }}"
-          echo "DOWNSTREAM_OWNER: ${{ env.DOWNSTREAM_OWNER }}"
-          echo "RUNTIME_IMAGES_DIR: ${{ env.RUNTIME_IMAGES_DIR }}"
-          echo "MANIFEST_FILES: ${{ env.MANIFEST_FILES }}"
-          echo "DOWNSTREAM_BRANCH: ${{ env.DOWNSTREAM_BRANCH }}"
-          echo "All environment variables:"
-          printenv
-      shell: bash
-
     - name: Sync and resolve conflicts
       run: |
         set -e
 
-        echo "Syncing downstream branch '${{ env.DOWNSTREAM_BRANCH }}' from upstream branch '${{ env.BRANCH_NAME }}'"
+        echo "Syncing '${{ env.DOWNSTREAM_OWNER }}'/'${{ env.DOWNSTREAM_BRANCH }}' from '${{ env.UPSTREAM_OWNER}}'/'${{ env.BRANCH_NAME }}'"
 
         # Ensure the downstream branch exists locally
         git checkout -b ${{ env.TEMP_BRANCH }} origin/${{ env.DOWNSTREAM_BRANCH }} || exit 1
@@ -109,8 +94,6 @@ jobs:
         # Push the temporary branch to downstream
         git push origin ${{ env.TEMP_BRANCH }}
 
-
-
     - name: Creates PR
       run: |
           gh pr create --repo https://github.com/${{ env.DOWNSTREAM_OWNER }}/notebooks.git \
@@ -120,9 +103,9 @@ jobs:
             --base ${{ env.DOWNSTREAM_BRANCH }}
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        pr_title: "Sync downstream from upstream"
+        pr_title: "Sync rhds:'${{ env.DOWNSTREAM_BRANCH }}' from odh:'${{ env.BRANCH_NAME }}'"
         pr_body: |
-            :robot: This is an automated Pull Request created by `/.github/workflows/gggg.yaml`.
+            :robot: This is an automated Pull Request created by `/.github/workflows/sync-downstream.yaml
 
             The following related files have been updated:
               - ${{ env.RUNTIME_IMAGES_DIR }}
