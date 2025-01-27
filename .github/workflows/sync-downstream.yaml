@@ -83,16 +83,56 @@ jobs:
           exit 1
         fi
 
-        # Commit changes if any
-        if [[ -n "$(git status --porcelain)" ]]; then
-          git commit -m "Merge upstream/${{ env.BRANCH_NAME }} into downstream/${{ env.DOWNSTREAM_BRANCH }} with resolved conflicts"
-        else
-          echo "No changes to commit. Exiting workflow."
-          exit 0
-        fi
+        # Continue merge
+        git merge --continue || {
+          echo "Merge could not continue. Aborting."
+          exit 1
+        }
 
         # Push the temporary branch to downstream
         git push origin ${{ env.TEMP_BRANCH }}
+
+
+    # - name: Sync and resolve conflicts
+    #   run: |
+    #     set -e
+
+    #     echo "Syncing '${{ env.DOWNSTREAM_OWNER }}'/'${{ env.DOWNSTREAM_BRANCH }}' from '${{ env.UPSTREAM_OWNER}}'/'${{ env.BRANCH_NAME }}'"
+
+    #     # Ensure the downstream branch exists locally
+    #     git checkout -b ${{ env.TEMP_BRANCH }} origin/${{ env.DOWNSTREAM_BRANCH }} || exit 1
+
+    #     # Pull changes from the upstream branch
+    #     git pull upstream ${{ env.BRANCH_NAME }} --no-rebase || true
+
+    #     # Resolve known conflicts
+    #     FILES_TO_RESOLVE=$(eval echo "${{ env.RUNTIME_IMAGES_DIR }} ${{ env.MANIFEST_FILES }}")
+    #     for FILE in $FILES_TO_RESOLVE; do
+    #       if [[ -f "$FILE" && "$(git status --porcelain=v1 2>/dev/null | grep -c "$FILE")" -gt 0 ]]; then
+    #         echo "Resolving conflict for $FILE by keeping downstream changes."
+    #         git checkout --ours "$FILE"
+    #         git add "$FILE"
+    #       fi
+    #     done
+
+    #     # Check for unresolved conflicts
+    #     if [[ -n "$(git ls-files -u)" ]]; then
+    #       echo "Unresolved conflicts detected in the following files:"
+    #       git ls-files -u
+    #       echo "Aborting merge due to unexpected conflicts."
+    #       exit 1
+    #     fi
+
+    #     # Commit changes if any
+    #     if [[ -n "$(git status --porcelain)" ]]; then
+    #       git commit -m "Merge upstream/${{ env.BRANCH_NAME }} into downstream/${{ env.DOWNSTREAM_BRANCH }} with resolved conflicts"
+    #     else
+    #       echo "No changes to commit. Exiting workflow."
+    #       exit 0
+    #     fi
+
+    #     # Push the temporary branch to downstream
+    #     git push origin ${{ env.TEMP_BRANCH }}
 
     - name: Creates PR
       run: |
